@@ -2,24 +2,38 @@ from django.http import HttpResponseServerError
 from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
-from rockapi.models import Rock
+from django.contrib.auth.models import User
+from rockapi.models import Rock, Type
 
 
 class RockView(ViewSet):
     """Rock view set"""
 
     def create(self, request):
-        """Handle POST operations
+        """Handle POST requests for rocks
 
         Returns:
-            Response -- JSON serialized instance
+            Response: JSON serialized representation of newly created rock
         """
+        # Get an object instance of a rock type
+        chosen_type = Type.objects.get(pk=request.data["typeId"])
 
-        # You will implement this feature in a future chapter
-        return Response("", status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        # Create a rock object and assign it property values
+        rock = Rock()
+        rock.user = request.auth.user
+        rock.type = chosen_type
+        rock.name = request.data["name"]
+        rock.weight = request.data["weight"]
+
+        try:
+            rock.save()
+            serializer = RockSerializer(rock, many=False)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as ex:
+            return Response({"reason": ex.args[0]}, status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request):
-        """Handle GET requests for all items
+        """Handle GET requests for all rocks
 
         Returns:
             Response -- JSON serialized array
@@ -32,8 +46,30 @@ class RockView(ViewSet):
             return HttpResponseServerError(ex)
 
 
+class RockOwnerSerializer(serializers.ModelSerializer):
+    """JSON serializer"""
+
+    class Meta:
+        model = User
+        fields = (
+            "first_name",
+            "last_name",
+        )
+
+
+class RockTypeSerializer(serializers.ModelSerializer):
+    """JSON serializer"""
+
+    class Meta:
+        model = Type
+        fields = ("label",)
+
+
 class RockSerializer(serializers.ModelSerializer):
     """JSON serializer"""
+
+    type = RockTypeSerializer(many=False)
+    user = RockOwnerSerializer(many=False)
 
     class Meta:
         model = Rock
@@ -41,4 +77,6 @@ class RockSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "weight",
+            "user",
+            "type",
         )
