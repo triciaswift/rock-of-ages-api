@@ -30,7 +30,35 @@ class RockView(ViewSet):
             serializer = RockSerializer(rock, many=False)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as ex:
-            return Response({"reason": ex.args[0]}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"response": ex.args[0]}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def destroy(self, request, pk=None):
+        """Handle DELETE requests for a single rock
+
+        Returns:
+            Response -- 200, 404, or 500 status code
+        """
+        try:
+            rock = Rock.objects.get(pk=pk)
+
+            if rock.user.id == request.auth.user.id:
+                rock.delete()
+                return Response(None, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response(
+                    {"message": "You do not own that rock"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        except Rock.DoesNotExist as ex:
+            return Response({"message": ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as ex:
+            return Response(
+                {"message": ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def list(self, request):
         """Handle GET requests for all rocks
