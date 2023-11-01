@@ -38,7 +38,7 @@ class RockView(ViewSet):
         """Handle DELETE requests for a single rock
 
         Returns:
-            Response -- 200, 404, or 500 status code
+            Response -- 204, 403, 404, or 500 status code
         """
         try:
             rock = Rock.objects.get(pk=pk)
@@ -66,8 +66,18 @@ class RockView(ViewSet):
         Returns:
             Response -- JSON serialized array
         """
+        # Get query string parameter
+        owner_only = self.request.query_params.get("owner", None)
+
         try:
+            # Start with all rows
             rocks = Rock.objects.all()
+
+            # If `?owner=current` is in the URL
+            if owner_only is not None and owner_only == "current":
+                # Filter to only the current user's rocks
+                rocks = rocks.filter(user=request.auth.user)
+
             serializer = RockSerializer(rocks, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as ex:
