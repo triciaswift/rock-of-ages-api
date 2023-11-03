@@ -37,7 +37,6 @@ class RocksSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rock
         fields = (
-            "id",
             "name",
             "weight",
         )
